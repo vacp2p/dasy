@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+message Message {
+
+    enum MessageType {
+        INVITE = 0;
+        JOIN = 1;
+        LEAVE = 2;
+        KICK = 3;
+        ACK = 4;
+        POST = 5;
+    }
+
+    uint64 clock = 1;
+    uint64 timestamp = 2;
+    MessageType message_type = 3;
+    repeated bytes body = 4;
+    repeated bytes signature = 5;
+}

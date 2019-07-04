@@ -2,7 +2,9 @@
 package client
 
 import (
+	"github.com/golang/protobuf/proto"
 	mvds "github.com/status-im/mvds/node"
+	"github.com/status-im/mvds/protobuf"
 	"github.com/status-im/mvds/state"
 )
 
@@ -42,4 +44,18 @@ func (c *Client) Ack(chat Chat, messageID []byte) {
 // Post sends a message to a chat.
 func (c *Client) Post(chat Chat, body []byte) {
 
+}
+
+func (c *Client) send(chat Chat, message *protobuf.Message) error {
+	buf, err := proto.Marshal(message)
+	if err != nil {
+		return  err
+	}
+
+	_, err = c.node.AppendMessage(state.GroupID(chat), buf)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
