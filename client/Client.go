@@ -1,4 +1,4 @@
-// This package contains the implementation of a `dasy` client.
+// Package client contains the implementation of a `dasy` client.
 package client
 
 import (
