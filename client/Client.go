@@ -2,9 +2,11 @@
 package client
 
 import (
+	"time"
+
 	"github.com/golang/protobuf/proto"
+	"github.com/status-im/dasy/protobuf"
 	mvds "github.com/status-im/mvds/node"
-	"github.com/status-im/mvds/protobuf"
 	"github.com/status-im/mvds/state"
 )
 
@@ -43,11 +45,20 @@ func (c *Client) Ack(chat Chat, messageID []byte) {
 
 // Post sends a message to a chat.
 func (c *Client) Post(chat Chat, body []byte) {
-
+	c.send(chat, protobuf.Message_POST, body) // @todo
 }
 
-func (c *Client) send(chat Chat, message *protobuf.Message) error {
-	buf, err := proto.Marshal(message)
+func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) error {
+	msg := &protobuf.Message{
+		Clock: 0,
+		Timestamp: uint64(time.Now().Unix()), // @todo we may be able to take this from mvds
+		MessageType: protobuf.Message_MessageType(t),
+		Body: body,
+	}
+
+	// @todo sign
+
+	buf, err := proto.Marshal(msg)
 	if err != nil {
 		return  err
 	}

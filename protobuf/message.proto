@@ -1,5 +1,8 @@
 syntax = "proto3";
 
+package mvds;
+option go_package = "protobuf";
+
 message Message {
 
     enum MessageType {
@@ -14,6 +17,6 @@ message Message {
     uint64 clock = 1;
     uint64 timestamp = 2;
     MessageType message_type = 3;
-    repeated bytes body = 4;
-    repeated bytes signature = 5;
+    bytes body = 4;
+    bytes signature = 5;
 }
