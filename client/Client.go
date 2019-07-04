@@ -8,7 +8,7 @@ import (
 
 type Chat state.GroupID
 
-// The dasy client.
+// Client is the actual daisy client.
 type Client struct {
 	node mvds.Node
 }
