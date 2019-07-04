@@ -6,6 +6,7 @@ import (
 	"github.com/status-im/mvds/state"
 )
 
+// Chat is the ID for a specific chat.
 type Chat state.GroupID
 
 // Client is the actual daisy client.
