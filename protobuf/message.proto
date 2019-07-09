@@ -14,9 +14,8 @@ message Message {
         POST = 5;
     }
 
-    uint64 clock = 1;
-    uint64 timestamp = 2;
-    MessageType message_type = 3;
-    bytes body = 4;
-    bytes signature = 5;
+    MessageType message_type = 1;
+    bytes body = 2;
+    bytes previous_message = 3;
+    repeated bytes signature = 4;
 }
