@@ -11,6 +11,9 @@ import (
 // Chat is the ID for a specific chat.
 type Chat state.GroupID
 
+// Peer is the ID for a specific peer.
+type Peer state.PeerID
+
 // Client is the actual daisy client.
 type Client struct {
 	node mvds.Node
@@ -19,7 +22,7 @@ type Client struct {
 }
 
 // Invite invites a peer to a chat.
-func (c *Client) Invite(chat Chat, peer []byte) {
+func (c *Client) Invite(chat Chat, peer Peer) {
 
 }
 
@@ -34,12 +37,13 @@ func (c *Client) Leave(chat Chat) {
 }
 
 // Kick kicks peer from a chat.
-func (c *Client) Kick(chat Chat, peer []byte) {
+func (c *Client) Kick(chat Chat, peer Peer) {
 
 }
 
+// We may not need this as we can rely on the acks of data sync
 // Ack acknowledges `Join`, `Leave` and `Kick` messages.
-func (c *Client) Ack(chat Chat, messageID []byte) {
+func (c *Client) Ack(chat Chat, messageID protobuf.MessageID) {
 
 }
 
