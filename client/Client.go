@@ -18,7 +18,7 @@ type Peer state.PeerID
 type Client struct {
 	node mvds.Node
 
-	lastMessage protobuf.MessageID
+	lastMessage state.MessageID // @todo maybe make type
 }
 
 // Invite invites a peer to a chat.
@@ -43,7 +43,7 @@ func (c *Client) Kick(chat Chat, peer Peer) {
 
 // We may not need this as we can rely on the acks of data sync
 // Ack acknowledges `Join`, `Leave` and `Kick` messages.
-func (c *Client) Ack(chat Chat, messageID protobuf.MessageID) {
+func (c *Client) Ack(chat Chat, messageID state.MessageID) {
 
 }
 
@@ -66,12 +66,12 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) er
 		return err
 	}
 
-	_, err = c.node.AppendMessage(state.GroupID(chat), buf)
+	id, err := c.node.AppendMessage(state.GroupID(chat), buf)
 	if err != nil {
 		return err
 	}
 
-	c.lastMessage = msg.ID()
+	c.lastMessage = id
 
 	return nil
 }
