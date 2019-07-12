@@ -18,8 +18,8 @@ type Peer state.PeerID
 
 // Client is the actual daisy client.
 type Client struct {
-	node mvds.Node
-	store store.MessageStore
+	node  mvds.Node
+	store store.MessageStore // @todo we probably need a different message store, not sure tho
 
 	lastMessage state.MessageID // @todo maybe make type
 }
