@@ -5,7 +5,9 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/status-im/dasy/protobuf"
 	mvds "github.com/status-im/mvds/node"
+	mvdsproto "github.com/status-im/mvds/protobuf"
 	"github.com/status-im/mvds/state"
+	"github.com/status-im/mvds/store"
 )
 
 // Chat is the ID for a specific chat.
@@ -17,6 +19,7 @@ type Peer state.PeerID
 // Client is the actual daisy client.
 type Client struct {
 	node mvds.Node
+	store store.MessageStore
 
 	lastMessage state.MessageID // @todo maybe make type
 }
@@ -74,4 +77,31 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) er
 	c.lastMessage = id
 
 	return nil
+}
+
+func (c *Client) onReceive(message mvdsproto.Message) {
+	// @todo other shit
+
+	// this is psuedo code
+	var msg protobuf.Message
+	err := proto.Unmarshal(message.Body, &msg)
+	if err != nil {
+		// @todo
+	}
+
+	if len(msg.PreviousMessage) == 0 {
+		return
+	}
+
+	if !c.store.Has(toMessageID(msg.PreviousMessage)) {
+		// @todo request previous message
+	}
+
+}
+
+// @todo make helper function in MVDS
+func toMessageID(b []byte) state.MessageID {
+	var id state.MessageID
+	copy(id[:], b)
+	return id
 }
