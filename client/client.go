@@ -57,6 +57,16 @@ func (c *Client) Post(chat Chat, body []byte) error {
 	return c.send(chat, protobuf.Message_POST, body)
 }
 
+// Listen listens for newly received messages and handles them appropriately.
+func (c *Client) Listen() {
+	sub := make(chan mvdsproto.Message)
+	c.node.Subscribe(sub)
+
+	for {
+		go c.onReceive(<- sub)
+	}
+}
+
 func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) error {
 	msg := &protobuf.Message{
 		MessageType:     protobuf.Message_MessageType(t),
