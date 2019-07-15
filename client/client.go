@@ -2,10 +2,14 @@
 package client
 
 import (
+	"log"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/status-im/dasy/protobuf"
 	mvds "github.com/status-im/mvds/node"
+	mvdsproto "github.com/status-im/mvds/protobuf"
 	"github.com/status-im/mvds/state"
+	"github.com/status-im/mvds/store"
 )
 
 // Chat is the ID for a specific chat.
@@ -16,7 +20,8 @@ type Peer state.PeerID
 
 // Client is the actual daisy client.
 type Client struct {
-	node mvds.Node
+	node  mvds.Node
+	store store.MessageStore // @todo we probably need a different message store, not sure tho
 
 	lastMessage state.MessageID // @todo maybe make type
 }
@@ -74,4 +79,32 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) er
 	c.lastMessage = id
 
 	return nil
+}
+
+func (c *Client) onReceive(message mvdsproto.Message) {
+	var msg protobuf.Message
+	err := proto.Unmarshal(message.Body, &msg)
+	if err != nil {
+		log.Printf("error while unmarshalling message: %s", err.Error())
+		return
+	}
+
+	// @todo pump messages to subscriber channels
+
+	if len(msg.PreviousMessage) == 0 {
+		return
+	}
+
+	c.handlePreviousMessage(bytesToGroupID(message.GroupId), bytesToMessageID(msg.PreviousMessage))
+}
+
+func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage state.MessageID) {
+	if c.store.Has(previousMessage) {
+		return
+	}
+
+	err := c.node.RequestMessage(group, previousMessage)
+	if err != nil {
+		log.Printf("error while requesting message: %s", err.Error())
+	}
 }
