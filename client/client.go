@@ -82,15 +82,14 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) er
 }
 
 func (c *Client) onReceive(message mvdsproto.Message) {
-	// @todo other shit
-
-	// this is psuedo code
 	var msg protobuf.Message
 	err := proto.Unmarshal(message.Body, &msg)
 	if err != nil {
 		log.Printf("error while unmarshalling message: %s", err.Error())
 		return
 	}
+
+	// @todo pump messages to subscriber channels
 
 	if len(msg.PreviousMessage) == 0 {
 		return
