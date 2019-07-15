@@ -2,6 +2,8 @@
 package client
 
 import (
+	"log"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/status-im/dasy/protobuf"
 	mvds "github.com/status-im/mvds/node"
@@ -93,15 +95,26 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 		return
 	}
 
-	if !c.store.Has(toMessageID(msg.PreviousMessage)) {
-		// @todo request previous message
+	id := toMessageID(msg.PreviousMessage)
+	if c.store.Has(id) {
+		return
 	}
 
+	err = c.node.RequestMessage(toGroupID(message.GroupId), id)
+	if err != nil {
+		log.Printf("error while requesting message: %s", err.Error())
+	}
 }
 
 // @todo make helper function in MVDS
 func toMessageID(b []byte) state.MessageID {
 	var id state.MessageID
+	copy(id[:], b)
+	return id
+}
+
+func toGroupID(b []byte) state.GroupID {
+	var id state.GroupID
 	copy(id[:], b)
 	return id
 }

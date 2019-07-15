@@ -37,7 +37,7 @@ type Node struct {
 
 	syncState state.SyncState
 
-	peers     map[state.GroupID][]state.PeerID
+	peers map[state.GroupID][]state.PeerID
 
 	payloads payloads
 
@@ -47,6 +47,8 @@ type Node struct {
 
 	epoch int64
 	mode  Mode
+
+	subscription chan<- protobuf.Message
 }
 
 // NewNode returns a new node.
@@ -62,17 +64,17 @@ func NewNode(
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Node{
-		ctx:       ctx,
-		cancel:    cancel,
-		store:     ms,
-		transport: st,
-		syncState: ss,
-		peers:     make(map[state.GroupID][]state.PeerID),
-		payloads:  newPayloads(),
-		nextEpoch: nextEpoch,
-		ID:        id,
-		epoch:     currentEpoch,
-		mode:      mode,
+		ctx:          ctx,
+		cancel:       cancel,
+		store:        ms,
+		transport:    st,
+		syncState:    ss,
+		peers:        make(map[state.GroupID][]state.PeerID),
+		payloads:     newPayloads(),
+		nextEpoch:    nextEpoch,
+		ID:           id,
+		epoch:        currentEpoch,
+		mode:         mode,
 	}
 }
 
@@ -113,6 +115,11 @@ func (n *Node) Stop() {
 	n.cancel()
 }
 
+// Subscribe subscribes to incoming messages.
+func (n *Node) Subscribe(sub chan <-protobuf.Message) {
+	n.subscription = sub
+}
+
 // AppendMessage sends a message to a given group.
 func (n *Node) AppendMessage(group state.GroupID, data []byte) (state.MessageID, error) {
 	m := protobuf.Message{
@@ -121,7 +128,7 @@ func (n *Node) AppendMessage(group state.GroupID, data []byte) (state.MessageID,
 		Body:      data,
 	}
 
-	id := state.ID(m)
+	id := m.ID()
 
 	peers, ok := n.peers[group]
 	if !ok {
@@ -152,6 +159,26 @@ func (n *Node) AppendMessage(group state.GroupID, data []byte) (state.MessageID,
 	// @todo think about a way to insta trigger send messages when send was selected, we don't wanna wait for ticks here
 
 	return id, nil
+}
+
+// RequestMessage adds a REQUEST record to the next payload for a given message ID.
+func (n *Node) RequestMessage(group state.GroupID, id state.MessageID) error {
+	peers, ok := n.peers[group]
+	if !ok {
+		return fmt.Errorf("trying to request from an unknown group %x", group[:4])
+	}
+
+	go func() {
+		for _, p := range peers {
+			if !n.IsPeerInGroup(group, p) {
+				continue
+			}
+
+			n.insertSyncState(group, id, p, state.REQUEST)
+		}
+	}()
+
+	return nil
 }
 
 // AddPeer adds a peer to a specific group making it a recipient of messages.
@@ -278,7 +305,7 @@ func (n *Node) onMessages(group state.GroupID, sender state.PeerID, messages []*
 			continue
 		}
 
-		id := state.ID(*m)
+		id := m.ID()
 		log.Printf("[%x] sending ACK (%x -> %x): %x\n", group[:4], n.ID[:4], sender[:4], id[:4])
 		a = append(a, id[:])
 	}
@@ -287,7 +314,7 @@ func (n *Node) onMessages(group state.GroupID, sender state.PeerID, messages []*
 }
 
 func (n *Node) onMessage(group state.GroupID, sender state.PeerID, msg protobuf.Message) error {
-	id := state.ID(msg)
+	id := msg.ID()
 	log.Printf("[%x] MESSAGE (%x -> %x): %x received.\n", group[:4], sender[:4], n.ID[:4], id[:4])
 
 	err := n.syncState.Remove(group, id, sender)
@@ -305,6 +332,10 @@ func (n *Node) onMessage(group state.GroupID, sender state.PeerID, msg protobuf.
 		}
 	}()
 
+	if n.subscription != nil {
+		n.subscription <- msg
+	}
+
 	err = n.store.Add(msg)
 	if err != nil {
 		return err
@@ -316,7 +347,7 @@ func (n *Node) onMessage(group state.GroupID, sender state.PeerID, msg protobuf.
 
 func (n *Node) insertSyncState(group state.GroupID, id state.MessageID, p state.PeerID, t state.RecordType) {
 	s := state.State{
-		Type: t,
+		Type:      t,
 		SendEpoch: n.epoch + 1,
 	}
 
