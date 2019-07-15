@@ -88,33 +88,24 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 	var msg protobuf.Message
 	err := proto.Unmarshal(message.Body, &msg)
 	if err != nil {
-		// @todo
+		log.Printf("error while unmarshalling message: %s", err.Error())
+		return
 	}
 
 	if len(msg.PreviousMessage) == 0 {
 		return
 	}
 
-	id := toMessageID(msg.PreviousMessage)
-	if c.store.Has(id) {
+	c.handlePreviousMessage(bytesToGroupID(message.GroupId), bytesToMessageID(msg.PreviousMessage))
+}
+
+func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage state.MessageID) {
+	if c.store.Has(previousMessage) {
 		return
 	}
 
-	err = c.node.RequestMessage(toGroupID(message.GroupId), id)
+	err := c.node.RequestMessage(group, previousMessage)
 	if err != nil {
 		log.Printf("error while requesting message: %s", err.Error())
 	}
-}
-
-// @todo make helper function in MVDS
-func toMessageID(b []byte) state.MessageID {
-	var id state.MessageID
-	copy(id[:], b)
-	return id
-}
-
-func toGroupID(b []byte) state.GroupID {
-	var id state.GroupID
-	copy(id[:], b)
-	return id
 }
