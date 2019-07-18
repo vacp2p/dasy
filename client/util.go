@@ -1,6 +1,6 @@
 package client
 
-import "github.com/status-im/mvds/state"
+import "github.com/vacp2p/mvds/state"
 
 func bytesToMessageID(b []byte) state.MessageID {
 	var id state.MessageID
