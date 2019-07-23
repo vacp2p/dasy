@@ -95,7 +95,10 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 		return
 	}
 
-	c.handlePreviousMessage(bytesToGroupID(message.GroupId), bytesToMessageID(msg.PreviousMessage))
+	c.handlePreviousMessage(
+		bytesToGroupID(message.GroupId),
+		bytesToMessageID(msg.PreviousMessage)
+	)
 }
 
 func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage state.MessageID) {
