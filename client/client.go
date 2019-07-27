@@ -5,11 +5,11 @@ import (
 	"log"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/status-im/dasy/protobuf"
-	mvds "github.com/status-im/mvds/node"
-	mvdsproto "github.com/status-im/mvds/protobuf"
-	"github.com/status-im/mvds/state"
-	"github.com/status-im/mvds/store"
+	"github.com/vacp2p/dasy/protobuf"
+	mvds "github.com/vacp2p/mvds/node"
+	mvdsproto "github.com/vacp2p/mvds/protobuf"
+	"github.com/vacp2p/mvds/state"
+	"github.com/vacp2p/mvds/store"
 )
 
 // Chat is the ID for a specific chat.
@@ -105,7 +105,10 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 		return
 	}
 
-	c.handlePreviousMessage(bytesToGroupID(message.GroupId), bytesToMessageID(msg.PreviousMessage))
+	c.handlePreviousMessage(
+		bytesToGroupID(message.GroupId),
+		bytesToMessageID(msg.PreviousMessage),
+	)
 }
 
 func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage state.MessageID) {

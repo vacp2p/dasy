@@ -1,8 +1,8 @@
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
-# github.com/status-im/mvds v0.0.18
-github.com/status-im/mvds/node
-github.com/status-im/mvds/protobuf
-github.com/status-im/mvds/state
-github.com/status-im/mvds/store
-github.com/status-im/mvds/transport
+# github.com/vacp2p/mvds v0.0.0-20190718214327-b8e366e4e634
+github.com/vacp2p/mvds/node
+github.com/vacp2p/mvds/protobuf
+github.com/vacp2p/mvds/state
+github.com/vacp2p/mvds/store
+github.com/vacp2p/mvds/transport

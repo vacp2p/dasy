@@ -11,10 +11,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/status-im/mvds/protobuf"
-	"github.com/status-im/mvds/state"
-	"github.com/status-im/mvds/store"
-	"github.com/status-im/mvds/transport"
+	"github.com/vacp2p/mvds/protobuf"
+	"github.com/vacp2p/mvds/state"
+	"github.com/vacp2p/mvds/store"
+	"github.com/vacp2p/mvds/transport"
 )
 
 // Mode represents the synchronization mode.
@@ -25,7 +25,8 @@ const (
 	BATCH
 )
 
-type calculateNextEpoch func(count uint64, epoch int64) int64
+// CalculateNextEpoch is a function used to calculate the next `SendEpoch` for a given message.
+type CalculateNextEpoch func(count uint64, epoch int64) int64
 
 // Node represents an MVDS node, it runs all the logic like sending and receiving protocol messages.
 type Node struct {
@@ -41,7 +42,7 @@ type Node struct {
 
 	payloads payloads
 
-	nextEpoch calculateNextEpoch
+	nextEpoch CalculateNextEpoch
 
 	ID state.PeerID
 
@@ -56,7 +57,7 @@ func NewNode(
 	ms store.MessageStore,
 	st transport.Transport,
 	ss state.SyncState,
-	nextEpoch calculateNextEpoch,
+	nextEpoch CalculateNextEpoch,
 	currentEpoch int64,
 	id state.PeerID,
 	mode Mode,
