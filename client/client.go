@@ -32,24 +32,24 @@ func (c *Client) Invite(chat Chat, peer Peer) {
 }
 
 // Join joins a chat.
-func (c *Client) Join(chat Chat) {
-
+func (c *Client) Join(chat Chat) error {
+	return c.send(chat, protobuf.Message_JOIN, c.node.ID[:])
 }
 
 // Leave leaves a chat.
-func (c *Client) Leave(chat Chat) {
-
+func (c *Client) Leave(chat Chat) error {
+	return c.send(chat, protobuf.Message_LEAVE, c.node.ID[:])
 }
 
 // Kick kicks peer from a chat.
-func (c *Client) Kick(chat Chat, peer Peer) {
-
+func (c *Client) Kick(chat Chat, peer Peer) error {
+	return c.send(chat, protobuf.Message_KICK, peer[:])
 }
 
-// We may not need this as we can rely on the acks of data sync
 // Ack acknowledges `Join`, `Leave` and `Kick` messages.
-func (c *Client) Ack(chat Chat, messageID state.MessageID) {
-
+func (c *Client) Ack(chat Chat, messageID state.MessageID) error {
+	// @todo We may not need this as we can rely on the acks of data sync
+	return c.send(chat, protobuf.Message_ACK, messageID[:])
 }
 
 // Post sends a message to a chat.
