@@ -30,7 +30,7 @@ type Client struct {
 
 	identity *ecdsa.PrivateKey
 
-	lastMessage state.MessageID // @todo maybe make type
+	lastMessages map[Chat]state.MessageID // @todo maybe make type
 }
 
 // Invite invites a peer to a chat.
@@ -64,10 +64,11 @@ func (c *Client) Post(chat Chat, body []byte) error {
 }
 
 func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) error {
+	lastMessage := c.lastMessages[chat]
 	msg := &protobuf.Message{
 		MessageType:     protobuf.Message_MessageType(t),
 		Body:            body,
-		PreviousMessage: c.lastMessage[:],
+		PreviousMessage: lastMessage[:],
 	}
 
 	err := c.sign(msg)
@@ -85,7 +86,7 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) er
 		return errors.Wrap(err, "failed to append message")
 	}
 
-	c.lastMessage = id
+	c.lastMessages[chat] = id
 
 	return nil
 }
