@@ -2,8 +2,12 @@
 package client
 
 import (
+	"crypto/ecdsa"
+	"crypto/sha256"
+	"encoding/binary"
 	"log"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	"github.com/vacp2p/dasy/protobuf"
 	mvds "github.com/vacp2p/mvds/node"
@@ -22,6 +26,8 @@ type Peer state.PeerID
 type Client struct {
 	node  mvds.Node
 	store store.MessageStore // @todo we probably need a different message store, not sure tho
+
+	identity *ecdsa.PrivateKey
 
 	lastMessage state.MessageID // @todo maybe make type
 }
@@ -110,4 +116,22 @@ func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage stat
 	if err != nil {
 		log.Printf("error while requesting message: %s", err.Error())
 	}
+}
+
+// sign signs generates a signature of the message and adds it to the message.
+func (c *Client) sign(m *protobuf.Message) error {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(m.MessageType))
+	b = append(b, m.Body...)
+	b = append(b, m.PreviousMessage...)
+
+	hash := sha256.Sum256(b)
+
+	sig, err := crypto.Sign(hash[:], c.identity)
+	if err != nil {
+		return err
+	}
+
+	m.Signature = sig
+	return nil
 }
