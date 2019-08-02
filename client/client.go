@@ -3,13 +3,12 @@ package client
 
 import (
 	"crypto/ecdsa"
-	"crypto/sha256"
-	"encoding/binary"
 	"log"
+	"sync"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/vacp2p/dasy/crypto"
 	"github.com/vacp2p/dasy/protobuf"
 	mvds "github.com/vacp2p/mvds/node"
 	mvdsproto "github.com/vacp2p/mvds/protobuf"
@@ -33,12 +32,16 @@ type Payload struct {
 
 // Client is the actual daisy client.
 type Client struct {
+	sync.Mutex
+
 	node  mvds.Node
 	store store.MessageStore // @todo we probably need a different message store, not sure tho
 
 	identity *ecdsa.PrivateKey
 
 	lastMessage state.MessageID // @todo maybe make type
+
+	feeds map[protobuf.Message_MessageType]Feed
 }
 
 // Invite invites a peer to a chat.
@@ -71,6 +74,17 @@ func (c *Client) Post(chat Chat, body []byte) error {
 	return c.send(chat, protobuf.Message_POST, body)
 }
 
+// Feed is a subscription feed for the specified message type.
+func (c *Client) Feed(msg protobuf.Message_MessageType) Feed {
+	c.Lock()
+	defer c.Unlock()
+	if c.feeds[msg] == nil {
+		// @todo create feed
+	}
+
+	return nil // @todo return feed
+}
+
 func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) error {
 	msg := &protobuf.Message{
 		MessageType:     protobuf.Message_MessageType(t),
@@ -78,7 +92,7 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) er
 		PreviousMessage: c.lastMessage[:],
 	}
 
-	err := c.sign(msg)
+	err := crypto.Sign(c.identity, msg)
 	if err != nil {
 		return errors.Wrap(err, "failed to sign message")
 	}
@@ -108,14 +122,14 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 
 	// @todo recover public key, convert to PeerID, pass it on?
 
-	_ := Payload{
+	payload := Payload{
 		msg.Body, // @todo this might need to be unmarshalled depending on the message type like invite?
 		msg.Signature,
 		Peer{}, // @todo recover from signature
 		message.Timestamp,
 	}
 
-	// @todo push above created payload to topic for specific message type
+	c.Feed(msg.MessageType).Send(payload)
 
 	if len(msg.PreviousMessage) == 0 {
 		return
@@ -136,22 +150,4 @@ func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage stat
 	if err != nil {
 		log.Printf("error while requesting message: %s", err.Error())
 	}
-}
-
-// sign signs generates a signature of the message and adds it to the message.
-func (c *Client) sign(m *protobuf.Message) error {
-	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, uint32(m.MessageType))
-	b = append(b, m.Body...)
-	b = append(b, m.PreviousMessage...)
-
-	hash := sha256.Sum256(b)
-
-	sig, err := crypto.Sign(hash[:], c.identity)
-	if err != nil {
-		return err
-	}
-
-	m.Signature = sig
-	return nil
 }
