@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/vacp2p/dasy/protobuf"
 	mvds "github.com/vacp2p/mvds/node"
 	mvdsproto "github.com/vacp2p/mvds/protobuf"
@@ -70,16 +71,19 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) er
 		PreviousMessage: c.lastMessage[:],
 	}
 
-	// @todo sign
+	err := c.sign(msg)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign message")
+	}
 
 	buf, err := proto.Marshal(msg)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to marshall message")
 	}
 
 	id, err := c.node.AppendMessage(state.GroupID(chat), buf)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to append message")
 	}
 
 	c.lastMessage = id
