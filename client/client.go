@@ -53,10 +53,9 @@ func (c *Client) Kick(chat Chat, peer Peer) {
 
 }
 
-// We may not need this as we can rely on the acks of data sync
 // Ack acknowledges `Join`, `Leave` and `Kick` messages.
 func (c *Client) Ack(chat Chat, messageID state.MessageID) {
-
+	// @todo: we may not need this as we can rely on the acks of data sync
 }
 
 // Post sends a message to a chat.
