@@ -11,3 +11,20 @@ https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/6874
 > **Da**ta **Sy**nc Client
 
 This repository implements a basic [data sync client](#TODO) that operates on top of [mvds](https://github.com/vacp2p/mvds).
+
+## Usage
+
+Listening to messages
+
+```go
+
+postchan := make(chan event.Payload)
+
+client.Feed(protobuf.Message_POST).Subscribe(postchan)
+
+for {
+	post := <-postchan
+	fmt.Printf("%+v\n", post)
+}
+
+```
