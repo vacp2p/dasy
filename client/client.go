@@ -9,6 +9,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/vacp2p/dasy/crypto"
+	"github.com/vacp2p/dasy/event"
 	"github.com/vacp2p/dasy/protobuf"
 	mvds "github.com/vacp2p/mvds/node"
 	mvdsproto "github.com/vacp2p/mvds/protobuf"
@@ -22,14 +23,6 @@ type Chat state.GroupID
 // Peer is the ID for a specific peer.
 type Peer state.PeerID
 
-// Payload represents a `dasy` packet.
-type Payload struct {
-	Body      interface{}
-	Signature []byte
-	Sender    Peer
-	Timestamp int64
-}
-
 // Client is the actual daisy client.
 type Client struct {
 	sync.Mutex
@@ -41,7 +34,7 @@ type Client struct {
 
 	lastMessage state.MessageID // @todo maybe make type
 
-	feeds map[protobuf.Message_MessageType]Feed
+	feeds map[protobuf.Message_MessageType]*event.Feed
 }
 
 // Invite invites a peer to a chat.
@@ -75,14 +68,15 @@ func (c *Client) Post(chat Chat, body []byte) error {
 }
 
 // Feed is a subscription feed for the specified message type.
-func (c *Client) Feed(msg protobuf.Message_MessageType) Feed {
+func (c *Client) Feed(msg protobuf.Message_MessageType) *event.Feed {
 	c.Lock()
 	defer c.Unlock()
+
 	if c.feeds[msg] == nil {
-		// @todo create feed
+		c.feeds[msg] = new(event.Feed)
 	}
 
-	return nil // @todo return feed
+	return c.feeds[msg]
 }
 
 func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) error {
@@ -122,11 +116,10 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 
 	// @todo recover public key, convert to PeerID, pass it on?
 
-	payload := Payload{
-		msg.Body, // @todo this might need to be unmarshalled depending on the message type like invite?
-		msg.Signature,
-		Peer{}, // @todo recover from signature
-		message.Timestamp,
+	payload := event.Payload{
+		Body:      msg.Body,      // @todo this might need to be unmarshalled depending on the message type like invite?
+		Signature: msg.Signature, // @todo recover from signature
+		Timestamp: message.Timestamp,
 	}
 
 	c.Feed(msg.MessageType).Send(payload)
