@@ -23,7 +23,7 @@ type Client struct {
 	node  mvds.Node
 	store store.MessageStore // @todo we probably need a different message store, not sure tho
 
-	lastMessage state.MessageID // @todo maybe make type
+	lastMessages map[Chat]state.MessageID // @todo maybe make type
 }
 
 // Invite invites a peer to a chat.
@@ -58,10 +58,11 @@ func (c *Client) Post(chat Chat, body []byte) error {
 }
 
 func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) error {
+	lastMessage := c.lastMessages[chat]
 	msg := &protobuf.Message{
 		MessageType:     protobuf.Message_MessageType(t),
 		Body:            body,
-		PreviousMessage: c.lastMessage[:],
+		PreviousMessage: lastMessage[:],
 	}
 
 	// @todo sign
@@ -76,7 +77,7 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) er
 		return err
 	}
 
-	c.lastMessage = id
+	c.lastMessages[chat] = id
 
 	return nil
 }
