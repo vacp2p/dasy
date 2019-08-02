@@ -17,5 +17,5 @@ message Message {
     MessageType message_type = 1;
     bytes body = 2;
     bytes previous_message = 3;
-    repeated bytes signature = 4;
+    bytes signature = 4;
 }
