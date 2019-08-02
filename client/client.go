@@ -23,6 +23,14 @@ type Chat state.GroupID
 // Peer is the ID for a specific peer.
 type Peer state.PeerID
 
+// Payload represents a `dasy` packet.
+type Payload struct {
+	Body      interface{}
+	Signature []byte
+	Sender    Peer
+	Timestamp int64
+}
+
 // Client is the actual daisy client.
 type Client struct {
 	node  mvds.Node
@@ -98,7 +106,14 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 		return
 	}
 
-	// @todo pump messages to subscriber channels
+	_ := Payload{
+		msg.Body, // @todo this might need to be unmarshalled depending on the message type like invite?
+		msg.Signature,
+		Peer{}, // @todo recover from signature
+		message.Timestamp,
+	}
+
+	// @todo push above created payload to topic for specific message type
 
 	if len(msg.PreviousMessage) == 0 {
 		return
