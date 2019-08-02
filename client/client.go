@@ -106,6 +106,8 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 		return
 	}
 
+	// @todo recover public key, convert to PeerID, pass it on?
+
 	_ := Payload{
 		msg.Body, // @todo this might need to be unmarshalled depending on the message type like invite?
 		msg.Signature,
