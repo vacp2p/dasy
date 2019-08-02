@@ -3,8 +3,6 @@ package client
 
 import (
 	"crypto/ecdsa"
-	"crypto/sha256"
-	"encoding/binary"
 	"log"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -98,6 +96,15 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 		return
 	}
 
+	pubkey, err := crypto.SigToPub(msg.ID(), msg.Signature)
+	if err != nil {
+		log.Printf("error while recovering pubkey: %s", err.Error())
+		// @todo
+		return
+	}
+
+	// @todo probably store the sender somewhere?
+
 	// @todo pump messages to subscriber channels
 
 	if len(msg.PreviousMessage) == 0 {
@@ -123,12 +130,7 @@ func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage stat
 
 // sign signs generates a signature of the message and adds it to the message.
 func (c *Client) sign(m *protobuf.Message) error {
-	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, uint32(m.MessageType))
-	b = append(b, m.Body...)
-	b = append(b, m.PreviousMessage...)
-
-	hash := sha256.Sum256(b)
+	hash := m.ID()
 
 	sig, err := crypto.Sign(hash[:], c.identity)
 	if err != nil {
