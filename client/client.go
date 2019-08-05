@@ -6,6 +6,7 @@ import (
 	"log"
 	"sync"
 
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/vacp2p/dasy/crypto"
@@ -32,7 +33,7 @@ type Client struct {
 
 	identity *ecdsa.PrivateKey
 
-	feeds map[protobuf.Message_MessageType]*event.Feed
+	feeds        map[protobuf.Message_MessageType]*event.Feed
 	lastMessages map[Chat]state.MessageID // @todo maybe make type
 }
 
@@ -114,11 +115,17 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 		return
 	}
 
-	// @todo recover public key, convert to PeerID, pass it on?
+	pubkey, err := ethcrypto.SigToPub(msg.ID(), msg.Signature)
+	if err != nil {
+		log.Printf("error while recovering pubkey: %s", err.Error())
+		// @todo
+		return
+	}
 
 	payload := event.Payload{
 		Body:      msg.Body,      // @todo this might need to be unmarshalled depending on the message type like invite?
 		Signature: msg.Signature, // @todo recover from signature
+		Sender:    crypto.PublicKeyToPeerID(*pubkey),
 		Timestamp: message.Timestamp,
 	}
 
