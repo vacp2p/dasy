@@ -6,6 +6,7 @@ type Feed struct {
 	subscribers []Subscription
 }
 
+// Subscribe adds a channel to the feed.
 func (f *Feed) Subscribe(channel Subscription) { // @todo think about returning a subscription like prysm
 	f.subscribers = append(f.subscribers, channel)
 }
