@@ -2,9 +2,12 @@
 package client
 
 import (
+	"crypto/ecdsa"
 	"log"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/vacp2p/dasy/client/internal"
 	"github.com/vacp2p/dasy/protobuf"
 	mvdsproto "github.com/vacp2p/mvds/protobuf"
@@ -23,7 +26,9 @@ type Client struct {
 	node  internal.DataSyncNode
 	store store.MessageStore // @todo we probably need a different message store, not sure tho
 
-	lastMessage state.MessageID // @todo maybe make type
+	identity *ecdsa.PrivateKey
+
+	lastMessages map[Chat]state.MessageID // @todo maybe make type
 }
 
 // Invite invites a peer to a chat.
@@ -46,10 +51,9 @@ func (c *Client) Kick(chat Chat, peer Peer) {
 
 }
 
-// We may not need this as we can rely on the acks of data sync
 // Ack acknowledges `Join`, `Leave` and `Kick` messages.
 func (c *Client) Ack(chat Chat, messageID state.MessageID) {
-
+	// @todo: we may not need this as we can rely on the acks of data sync
 }
 
 // Post sends a message to a chat.
@@ -68,25 +72,29 @@ func (c *Client) Listen() {
 }
 
 func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) error {
+	lastMessage := c.lastMessages[chat]
 	msg := &protobuf.Message{
 		MessageType:     protobuf.Message_MessageType(t),
 		Body:            body,
-		PreviousMessage: c.lastMessage[:],
+		PreviousMessage: lastMessage[:],
 	}
 
-	// @todo sign
+	err := c.sign(msg)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign message")
+	}
 
 	buf, err := proto.Marshal(msg)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to marshall message")
 	}
 
 	id, err := c.node.AppendMessage(state.GroupID(chat), buf)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to append message")
 	}
 
-	c.lastMessage = id
+	c.lastMessages[chat] = id
 
 	return nil
 }
@@ -100,6 +108,15 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 		log.Printf("error while unmarshalling message: %s", err.Error())
 		return
 	}
+
+	pubkey, err := crypto.SigToPub(msg.ID(), msg.Signature)
+	if err != nil {
+		log.Printf("error while recovering pubkey: %s", err.Error())
+		// @todo
+		return
+	}
+
+	// @todo probably store the sender somewhere?
 
 	// @todo pump messages to subscriber channels
 
@@ -122,4 +139,17 @@ func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage stat
 	if err != nil {
 		log.Printf("error while requesting message: %s", err.Error())
 	}
+}
+
+// sign signs generates a signature of the message and adds it to the message.
+func (c *Client) sign(m *protobuf.Message) error {
+	hash := m.ID()
+
+	sig, err := crypto.Sign(hash[:], c.identity)
+	if err != nil {
+		return err
+	}
+
+	m.Signature = sig
+	return nil
 }
