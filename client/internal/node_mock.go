@@ -50,7 +50,7 @@ func (mr *MockDataSyncNodeMockRecorder) AppendMessage(groupID, data interface{})
 }
 
 // Subscribe mocks base method
-func (m *MockDataSyncNode) Subscribe(sub chan<- protobuf.Message) {
+func (m *MockDataSyncNode) Subscribe(sub chan protobuf.Message) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Subscribe", sub)
 }
