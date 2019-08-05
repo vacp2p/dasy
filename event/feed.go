@@ -7,7 +7,7 @@ type Feed struct {
 }
 
 func (f *Feed) Subscribe(channel Subscription) { // @todo think about returning a subscription like prysm
-
+	f.subscribers = append(f.subscribers, channel)
 }
 
 func (f *Feed) Send(value Payload) {
