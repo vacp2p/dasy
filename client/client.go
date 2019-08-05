@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/vacp2p/dasy/client/internal"
 	"github.com/vacp2p/dasy/protobuf"
-	mvds "github.com/vacp2p/mvds/node"
 	mvdsproto "github.com/vacp2p/mvds/protobuf"
 	"github.com/vacp2p/mvds/state"
 	"github.com/vacp2p/mvds/store"
@@ -20,7 +20,7 @@ type Peer state.PeerID
 
 // Client is the actual daisy client.
 type Client struct {
-	node  mvds.Node
+	node  internal.DataSyncNode
 	store store.MessageStore // @todo we probably need a different message store, not sure tho
 
 	lastMessage state.MessageID // @todo maybe make type
