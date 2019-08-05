@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/vacp2p/dasy/client/internal"
+	mvdsproto "github.com/vacp2p/mvds/protobuf"
 )
 
 func TestMain(m *testing.M) {
@@ -20,10 +21,16 @@ func TestClient_Listen(t *testing.T) {
 
 	node := internal.NewMockDataSyncNode(ctrl)
 
-	_ := Client{
+	client := Client{
 		node: node,
 	}
 
+	var channel chan mvdsproto.Message
+	node.EXPECT().Subscribe(gomock.Any()).Do(func(c chan mvdsproto.Message) {
+		channel = c
+	})
 
-	// @todo
+	log.Print(channel)
+
+	client.Listen()
 }
