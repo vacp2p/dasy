@@ -30,7 +30,5 @@ func TestClient_Listen(t *testing.T) {
 		channel = c
 	})
 
-	log.Print(channel)
-
 	client.Listen()
 }
