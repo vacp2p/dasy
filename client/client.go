@@ -80,6 +80,9 @@ func (c *Client) Feed(msg protobuf.Message_MessageType) *event.Feed {
 }
 
 func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) error {
+	c.Lock()
+	defer c.Unlock()
+
 	lastMessage := c.lastMessages[chat]
 	msg := &protobuf.Message{
 		MessageType:     protobuf.Message_MessageType(t),
