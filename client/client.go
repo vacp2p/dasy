@@ -85,7 +85,7 @@ func (c *Client) Listen() {
 	c.node.Subscribe(sub)
 
 	for {
-		go c.onReceive(<- sub)
+		go c.onReceive(<-sub)
 	}
 }
 
