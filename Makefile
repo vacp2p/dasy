@@ -13,4 +13,5 @@ mock-install:
 
 mock:
 	mockgen -package=internal -destination=client/internal/node_mock.go -source=client/internal/node.go
+	mockgen -package=internal -destination=client/internal/store_mock.go -source=vendor/github.com/vacp2p/mvds/store/messagestore.go
 .PHONY: mock

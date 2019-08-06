@@ -15,7 +15,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func TestClient_Listen(t *testing.T) {
+func TestClient_Listen_RequestsMissingParent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -32,5 +32,9 @@ func TestClient_Listen(t *testing.T) {
 
 	// @todo actual
 	sub<-mvdsproto.Message{}
+
+	// @todo ensure messagestore is checked
+
+	// @todo ensure message is requested
 
 }
