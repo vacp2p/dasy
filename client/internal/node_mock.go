@@ -50,15 +50,17 @@ func (mr *MockDataSyncNodeMockRecorder) AppendMessage(groupID, data interface{})
 }
 
 // Subscribe mocks base method
-func (m *MockDataSyncNode) Subscribe(sub chan protobuf.Message) {
+func (m *MockDataSyncNode) Subscribe() chan protobuf.Message {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Subscribe", sub)
+	ret := m.ctrl.Call(m, "Subscribe")
+	ret0, _ := ret[0].(chan protobuf.Message)
+	return ret0
 }
 
 // Subscribe indicates an expected call of Subscribe
-func (mr *MockDataSyncNodeMockRecorder) Subscribe(sub interface{}) *gomock.Call {
+func (mr *MockDataSyncNodeMockRecorder) Subscribe() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subscribe", reflect.TypeOf((*MockDataSyncNode)(nil).Subscribe), sub)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subscribe", reflect.TypeOf((*MockDataSyncNode)(nil).Subscribe))
 }
 
 // RequestMessage mocks base method

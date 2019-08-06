@@ -25,10 +25,12 @@ func TestClient_Listen(t *testing.T) {
 		node: node,
 	}
 
-	var channel chan mvdsproto.Message
-	node.EXPECT().Subscribe(gomock.Any()).Do(func(c chan mvdsproto.Message) {
-		channel = c
-	})
+	sub := make(chan mvdsproto.Message)
+	node.EXPECT().Subscribe().Return(sub)
 
-	client.Listen()
+	go client.Listen()
+
+	// @todo actual
+	sub<-mvdsproto.Message{}
+
 }
