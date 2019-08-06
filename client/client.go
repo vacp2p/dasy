@@ -32,32 +32,32 @@ func (c *Client) Invite(chat Chat, peer Peer) {
 }
 
 // Join joins a chat.
-func (c *Client) Join(chat Chat) error {
+func (c *Client) Join(chat Chat) (state.MessageID, error) {
 	return c.send(chat, protobuf.Message_JOIN, c.node.ID[:])
 }
 
 // Leave leaves a chat.
-func (c *Client) Leave(chat Chat) error {
+func (c *Client) Leave(chat Chat) (state.MessageID, error) {
 	return c.send(chat, protobuf.Message_LEAVE, c.node.ID[:])
 }
 
 // Kick kicks peer from a chat.
-func (c *Client) Kick(chat Chat, peer Peer) error {
+func (c *Client) Kick(chat Chat, peer Peer) (state.MessageID, error) {
 	return c.send(chat, protobuf.Message_KICK, peer[:])
 }
 
 // Ack acknowledges `Join`, `Leave` and `Kick` messages.
-func (c *Client) Ack(chat Chat, messageID state.MessageID) error {
+func (c *Client) Ack(chat Chat, messageID state.MessageID) (state.MessageID, error) {
 	// @todo We may not need this as we can rely on the acks of data sync
 	return c.send(chat, protobuf.Message_ACK, messageID[:])
 }
 
 // Post sends a message to a chat.
-func (c *Client) Post(chat Chat, body []byte) error {
+func (c *Client) Post(chat Chat, body []byte) (state.MessageID, error) {
 	return c.send(chat, protobuf.Message_POST, body)
 }
 
-func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) error {
+func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) (state.MessageID, error) {
 	msg := &protobuf.Message{
 		MessageType:     protobuf.Message_MessageType(t),
 		Body:            body,
@@ -68,17 +68,17 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) er
 
 	buf, err := proto.Marshal(msg)
 	if err != nil {
-		return err
+		return state.MessageID{}, err
 	}
 
 	id, err := c.node.AppendMessage(state.GroupID(chat), buf)
 	if err != nil {
-		return err
+		return state.MessageID{}, err
 	}
 
 	c.lastMessage = id
 
-	return nil
+	return id, nil
 }
 
 func (c *Client) onReceive(message mvdsproto.Message) {
