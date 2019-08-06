@@ -81,8 +81,7 @@ func (c *Client) Feed(msg protobuf.Message_MessageType) *event.Feed {
 
 // Listen listens for newly received messages and handles them appropriately.
 func (c *Client) Listen() {
-	sub := make(chan mvdsproto.Message)
-	c.node.Subscribe(sub)
+	sub := c.node.Subscribe()
 
 	for {
 		go c.onReceive(<-sub)
@@ -157,11 +156,16 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 }
 
 func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage state.MessageID) {
-	if c.store.Has(previousMessage) {
+	ok, err := c.store.Has(previousMessage)
+	if ok {
 		return
 	}
 
-	err := c.node.RequestMessage(group, previousMessage)
+	if err != nil {
+		log.Printf("error while checking if message exists: %s", err.Error())
+	}
+
+	err = c.node.RequestMessage(group, previousMessage)
 	if err != nil {
 		log.Printf("error while requesting message: %s", err.Error())
 	}
