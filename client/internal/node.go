@@ -7,6 +7,6 @@ import (
 
 type DataSyncNode interface {
 	AppendMessage(groupID state.GroupID, data []byte) (state.MessageID, error)
-	Subscribe(sub chan protobuf.Message)
+	Subscribe() chan protobuf.Message
 	RequestMessage(group state.GroupID, id state.MessageID) error
 }
