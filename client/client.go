@@ -2,11 +2,14 @@
 package client
 
 import (
+	"crypto/ecdsa"
 	"log"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
+	"github.com/vacp2p/dasy/client/internal"
 	"github.com/vacp2p/dasy/protobuf"
-	mvds "github.com/vacp2p/mvds/node"
 	mvdsproto "github.com/vacp2p/mvds/protobuf"
 	"github.com/vacp2p/mvds/state"
 	"github.com/vacp2p/mvds/store"
@@ -20,10 +23,12 @@ type Peer state.PeerID
 
 // Client is the actual daisy client.
 type Client struct {
-	node  mvds.Node
+	node  internal.DataSyncNode
 	store store.MessageStore // @todo we probably need a different message store, not sure tho
 
-	lastMessage state.MessageID // @todo maybe make type
+	identity *ecdsa.PrivateKey
+
+	lastMessages map[Chat]state.MessageID // @todo maybe make type
 }
 
 // Invite invites a peer to a chat.
@@ -57,30 +62,46 @@ func (c *Client) Post(chat Chat, body []byte) (state.MessageID, error) {
 	return c.send(chat, protobuf.Message_POST, body)
 }
 
+// Listen listens for newly received messages and handles them appropriately.
+func (c *Client) Listen() {
+	sub := make(chan mvdsproto.Message)
+	c.node.Subscribe(sub)
+
+	for {
+		go c.onReceive(<- sub)
+	}
+}
+
 func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) (state.MessageID, error) {
+	lastMessage := c.lastMessages[chat]
 	msg := &protobuf.Message{
 		MessageType:     protobuf.Message_MessageType(t),
 		Body:            body,
-		PreviousMessage: c.lastMessage[:],
+		PreviousMessage: lastMessage[:],
 	}
 
-	// @todo sign
+	err := c.sign(msg)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign message")
+	}
 
 	buf, err := proto.Marshal(msg)
 	if err != nil {
-		return state.MessageID{}, err
+		return state.MessageID{}, errors.Wrap(err, "failed to marshall message")
 	}
 
 	id, err := c.node.AppendMessage(state.GroupID(chat), buf)
 	if err != nil {
-		return state.MessageID{}, err
+		return state.MessageID{}, errors.Wrap(err, "failed to append message")
 	}
 
-	c.lastMessage = id
+	c.lastMessages[chat] = id
 
 	return id, nil
 }
 
+// onReceive handles lower level message receiving logic, such as requesting all previous message dependencies that we
+// may not have, as well as unmarshalling and storing the message.
 func (c *Client) onReceive(message mvdsproto.Message) {
 	var msg protobuf.Message
 	err := proto.Unmarshal(message.Body, &msg)
@@ -88,6 +109,15 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 		log.Printf("error while unmarshalling message: %s", err.Error())
 		return
 	}
+
+	pubkey, err := crypto.SigToPub(msg.ID(), msg.Signature)
+	if err != nil {
+		log.Printf("error while recovering pubkey: %s", err.Error())
+		// @todo
+		return
+	}
+
+	// @todo probably store the sender somewhere?
 
 	// @todo pump messages to subscriber channels
 
@@ -110,4 +140,17 @@ func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage stat
 	if err != nil {
 		log.Printf("error while requesting message: %s", err.Error())
 	}
+}
+
+// sign signs generates a signature of the message and adds it to the message.
+func (c *Client) sign(m *protobuf.Message) error {
+	hash := m.ID()
+
+	sig, err := crypto.Sign(hash[:], c.identity)
+	if err != nil {
+		return err
+	}
+
+	m.Signature = sig
+	return nil
 }
