@@ -28,6 +28,8 @@ type Peer state.PeerID
 type Client struct {
 	sync.Mutex
 
+	id Peer // @todo think of turning dataSyncNode ID into a func
+
 	node  internal.DataSyncNode
 	store store.MessageStore
 
@@ -43,27 +45,28 @@ func (c *Client) Invite(chat Chat, peer Peer) {
 }
 
 // Join joins a chat.
-func (c *Client) Join(chat Chat) {
-
+func (c *Client) Join(chat Chat) (state.MessageID, error) {
+	return c.send(chat, protobuf.Message_JOIN, c.id[:])
 }
 
 // Leave leaves a chat.
-func (c *Client) Leave(chat Chat) {
-
+func (c *Client) Leave(chat Chat) (state.MessageID, error) {
+	return c.send(chat, protobuf.Message_LEAVE, c.id[:])
 }
 
 // Kick kicks peer from a chat.
-func (c *Client) Kick(chat Chat, peer Peer) {
-
+func (c *Client) Kick(chat Chat, peer Peer) (state.MessageID, error) {
+	return c.send(chat, protobuf.Message_KICK, peer[:])
 }
 
 // Ack acknowledges `Join`, `Leave` and `Kick` messages.
-func (c *Client) Ack(chat Chat, messageID state.MessageID) {
-	// @todo: we may not need this as we can rely on the acks of data sync
+func (c *Client) Ack(chat Chat, messageID state.MessageID) (state.MessageID, error) {
+	// @todo We may not need this as we can rely on the acks of data sync
+	return c.send(chat, protobuf.Message_ACK, messageID[:])
 }
 
 // Post sends a message to a chat.
-func (c *Client) Post(chat Chat, body []byte) error {
+func (c *Client) Post(chat Chat, body []byte) (state.MessageID, error) {
 	return c.send(chat, protobuf.Message_POST, body)
 }
 
@@ -88,7 +91,7 @@ func (c *Client) Listen() {
 	}
 }
 
-func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) error {
+func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) (state.MessageID, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -101,22 +104,22 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) er
 
 	err := crypto.Sign(c.identity, msg)
 	if err != nil {
-		return errors.Wrap(err, "failed to sign message")
+		return state.MessageID{}, errors.Wrap(err, "failed to sign message")
 	}
 
 	buf, err := proto.Marshal(msg)
 	if err != nil {
-		return errors.Wrap(err, "failed to marshall message")
+		return state.MessageID{}, errors.Wrap(err, "failed to marshall message")
 	}
 
 	id, err := c.node.AppendMessage(state.GroupID(chat), buf)
 	if err != nil {
-		return errors.Wrap(err, "failed to append message")
+		return state.MessageID{}, errors.Wrap(err, "failed to append message")
 	}
 
 	c.lastMessages[chat] = id
 
-	return nil
+	return id, nil
 }
 
 // onReceive handles lower level message receiving logic, such as requesting all previous message dependencies that we
