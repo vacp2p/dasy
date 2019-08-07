@@ -17,6 +17,7 @@ import (
 	"github.com/vacp2p/dasy/event"
 	"github.com/vacp2p/dasy/protobuf"
 	mvdsproto "github.com/vacp2p/mvds/protobuf"
+	"github.com/vacp2p/mvds/state"
 )
 
 func TestMain(m *testing.M) {
@@ -25,6 +26,18 @@ func TestMain(m *testing.M) {
 }
 
 // @todo think about turning feed into an interface so we can mock it and ensure its never called when sigs fail
+
+func TestClient_Post(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	node := internal.NewMockDataSyncNode(ctrl)
+
+	client := Client{
+		node: node,
+		lastMessages: make(map[Chat]state.MessageID),
+	}
+}
 
 func TestClient_Listen_MessageSentToFeed(t *testing.T) {
 	ctrl := gomock.NewController(t)
