@@ -4,11 +4,14 @@ package client
 import (
 	"crypto/ecdsa"
 	"log"
+	"sync"
 
-	"github.com/ethereum/go-ethereum/crypto"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/vacp2p/dasy/client/internal"
+	"github.com/vacp2p/dasy/crypto"
+	"github.com/vacp2p/dasy/event"
 	"github.com/vacp2p/dasy/protobuf"
 	mvdsproto "github.com/vacp2p/mvds/protobuf"
 	"github.com/vacp2p/mvds/state"
@@ -23,11 +26,16 @@ type Peer state.PeerID
 
 // Client is the actual daisy client.
 type Client struct {
+	sync.Mutex
+
+	id Peer // @todo think of turning dataSyncNode ID into a func
+
 	node  internal.DataSyncNode
-	store store.MessageStore // @todo we probably need a different message store, not sure tho
+	store store.MessageStore
 
 	identity *ecdsa.PrivateKey
 
+	feeds        map[protobuf.Message_MessageType]*event.Feed
 	lastMessages map[Chat]state.MessageID // @todo maybe make type
 }
 
@@ -38,12 +46,12 @@ func (c *Client) Invite(chat Chat, peer Peer) {
 
 // Join joins a chat.
 func (c *Client) Join(chat Chat) (state.MessageID, error) {
-	return c.send(chat, protobuf.Message_JOIN, c.node.ID[:])
+	return c.send(chat, protobuf.Message_JOIN, c.id[:])
 }
 
 // Leave leaves a chat.
 func (c *Client) Leave(chat Chat) (state.MessageID, error) {
-	return c.send(chat, protobuf.Message_LEAVE, c.node.ID[:])
+	return c.send(chat, protobuf.Message_LEAVE, c.id[:])
 }
 
 // Kick kicks peer from a chat.
@@ -62,17 +70,31 @@ func (c *Client) Post(chat Chat, body []byte) (state.MessageID, error) {
 	return c.send(chat, protobuf.Message_POST, body)
 }
 
+// Feed is a subscription feed for the specified message type.
+func (c *Client) Feed(msg protobuf.Message_MessageType) *event.Feed {
+	c.Lock()
+	defer c.Unlock()
+
+	if c.feeds[msg] == nil {
+		c.feeds[msg] = new(event.Feed)
+	}
+
+	return c.feeds[msg]
+}
+
 // Listen listens for newly received messages and handles them appropriately.
 func (c *Client) Listen() {
-	sub := make(chan mvdsproto.Message)
-	c.node.Subscribe(sub)
+	sub := c.node.Subscribe()
 
 	for {
-		go c.onReceive(<- sub)
+		go c.onReceive(<-sub)
 	}
 }
 
 func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) (state.MessageID, error) {
+	c.Lock()
+	defer c.Unlock()
+
 	lastMessage := c.lastMessages[chat]
 	msg := &protobuf.Message{
 		MessageType:     protobuf.Message_MessageType(t),
@@ -80,9 +102,9 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) (s
 		PreviousMessage: lastMessage[:],
 	}
 
-	err := c.sign(msg)
+	err := crypto.Sign(c.identity, msg)
 	if err != nil {
-		return errors.Wrap(err, "failed to sign message")
+		return state.MessageID{}, errors.Wrap(err, "failed to sign message")
 	}
 
 	buf, err := proto.Marshal(msg)
@@ -110,16 +132,21 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 		return
 	}
 
-	pubkey, err := crypto.SigToPub(msg.ID(), msg.Signature)
+	pubkey, err := ethcrypto.SigToPub(msg.ID(), msg.Signature)
 	if err != nil {
 		log.Printf("error while recovering pubkey: %s", err.Error())
 		// @todo
 		return
 	}
 
-	// @todo probably store the sender somewhere?
+	payload := event.Payload{
+		Body:      msg.Body,      // @todo this might need to be unmarshalled depending on the message type like invite?
+		Signature: msg.Signature, // @todo recover from signature
+		Sender:    crypto.PublicKeyToPeerID(*pubkey),
+		Timestamp: message.Timestamp,
+	}
 
-	// @todo pump messages to subscriber channels
+	go c.Feed(msg.MessageType).Send(payload)
 
 	if len(msg.PreviousMessage) == 0 {
 		return
@@ -132,25 +159,17 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 }
 
 func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage state.MessageID) {
-	if c.store.Has(previousMessage) {
+	ok, err := c.store.Has(previousMessage)
+	if ok {
 		return
 	}
 
-	err := c.node.RequestMessage(group, previousMessage)
+	if err != nil {
+		log.Printf("error while checking if message exists: %s", err.Error())
+	}
+
+	err = c.node.RequestMessage(group, previousMessage)
 	if err != nil {
 		log.Printf("error while requesting message: %s", err.Error())
 	}
-}
-
-// sign signs generates a signature of the message and adds it to the message.
-func (c *Client) sign(m *protobuf.Message) error {
-	hash := m.ID()
-
-	sig, err := crypto.Sign(hash[:], c.identity)
-	if err != nil {
-		return err
-	}
-
-	m.Signature = sig
-	return nil
 }
