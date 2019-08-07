@@ -6,6 +6,10 @@ build:
 	go build
 .PHONY: build
 
+test:
+	go test -v
+.PHONY: test
+
 protobuf:
 	protoc --go_out=. ./protobuf/*.proto
 .PHONY: protobuf
