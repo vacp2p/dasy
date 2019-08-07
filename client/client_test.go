@@ -32,10 +32,22 @@ func TestClient_Post(t *testing.T) {
 	defer ctrl.Finish()
 
 	node := internal.NewMockDataSyncNode(ctrl)
+	identity, _ := ecdsa.GenerateKey(secp256k1.S256(), rand.Reader)
 
 	client := Client{
-		node: node,
+		node:         node,
 		lastMessages: make(map[Chat]state.MessageID),
+		identity:     identity,
+	}
+
+	chat := Chat([32]byte{0x01, 0x2, 0x3, 0x4})
+	msgid := state.MessageID([32]byte{0x01, 0x2, 0x3})
+
+	node.EXPECT().AppendMessage(state.GroupID(chat), gomock.Any()).Return(msgid, nil)
+
+	ret, _ := client.Post(chat, []byte("string"))
+	if msgid != ret {
+		t.Error("returned message ID does not match expected")
 	}
 }
 
