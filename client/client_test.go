@@ -80,9 +80,8 @@ func TestClient_Listen_RequestsMissingParent(t *testing.T) {
 
 	go client.Listen()
 
-	parent := []byte("parent")
 	msg := createMessage()
-	msg.PreviousMessage = parent
+	msg.PreviousMessage = []byte("parent")
 
 	ok := make(chan event.Payload)
 	client.Feed(msg.MessageType).Subscribe(ok)
