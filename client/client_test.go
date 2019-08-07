@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"io/ioutil"
 	"log"
+	"os"
 	"reflect"
 
 	"testing"
@@ -22,7 +23,7 @@ import (
 
 func TestMain(m *testing.M) {
 	log.SetOutput(ioutil.Discard)
-	m.Run()
+	os.Exit(m.Run())
 }
 
 // @todo think about turning feed into an interface so we can mock it and ensure its never called when sigs fail
