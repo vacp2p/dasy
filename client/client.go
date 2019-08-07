@@ -146,7 +146,7 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 		Timestamp: message.Timestamp,
 	}
 
-	c.Feed(msg.MessageType).Send(payload)
+	go c.Feed(msg.MessageType).Send(payload)
 
 	if len(msg.PreviousMessage) == 0 {
 		return
