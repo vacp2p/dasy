@@ -42,16 +42,11 @@ func TestClient_Listen_MessageSentToFeed(t *testing.T) {
 
 	go client.Listen()
 
-	msg := &protobuf.Message{
-		MessageType: protobuf.Message_POST,
-		Body: []byte("hi"),
-	}
+	msg := createMessage()
 
 	ok := make(chan event.Payload)
 	client.Feed(msg.MessageType).Subscribe(ok)
 
-	identity, _ := ecdsa.GenerateKey(secp256k1.S256(), rand.Reader)
-	_ = crypto.Sign(identity, msg)
 	val, _ := proto.Marshal(msg)
 
 	sub<-mvdsproto.Message{
@@ -86,18 +81,12 @@ func TestClient_Listen_RequestsMissingParent(t *testing.T) {
 	go client.Listen()
 
 	parent := []byte("parent")
-
-	msg := &protobuf.Message{
-		MessageType: protobuf.Message_POST,
-		Body: []byte("hi"),
-		PreviousMessage: parent,
-	}
+	msg := createMessage()
+	msg.PreviousMessage = parent
 
 	ok := make(chan event.Payload)
 	client.Feed(msg.MessageType).Subscribe(ok)
 
-	identity, _ := ecdsa.GenerateKey(secp256k1.S256(), rand.Reader)
-	_ = crypto.Sign(identity, msg)
 	val, _ := proto.Marshal(msg)
 
 	sub<-mvdsproto.Message{
@@ -105,4 +94,15 @@ func TestClient_Listen_RequestsMissingParent(t *testing.T) {
 	}
 
 	<-ok
+}
+
+func createMessage() *protobuf.Message {
+	msg := &protobuf.Message{
+		MessageType: protobuf.Message_POST,
+		Body: []byte("hi"),
+	}
+
+	identity, _ := ecdsa.GenerateKey(secp256k1.S256(), rand.Reader)
+	_ = crypto.Sign(identity, msg)
+	return msg
 }
