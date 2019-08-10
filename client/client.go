@@ -95,11 +95,10 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) (s
 	c.Lock()
 	defer c.Unlock()
 
-	lastMessage := c.lastMessages[chat]
 	msg := &protobuf.Message{
 		MessageType:     protobuf.Message_MessageType(t),
 		Body:            body,
-		PreviousMessage: lastMessage[:],
+		PreviousMessage: c.lastMessage(chat),
 	}
 
 	err := crypto.Sign(c.identity, msg)
@@ -172,4 +171,13 @@ func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage stat
 	if err != nil {
 		log.Printf("error while requesting message: %s", err.Error())
 	}
+}
+
+func (c *Client) lastMessage(chat Chat) []byte {
+	last, ok := c.lastMessages[chat]
+	if !ok {
+		return nil
+	}
+
+	return last[:]
 }
