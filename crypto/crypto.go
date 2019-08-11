@@ -8,6 +8,7 @@ import (
 	"github.com/vacp2p/mvds/state"
 )
 
+// PublicKeyToPeerID turns an ECDSA Public Key to an mvds PeerID.
 func PublicKeyToPeerID(k ecdsa.PublicKey) state.PeerID {
 	var p state.PeerID
 	copy(p[:], crypto.FromECDSAPub(&k))
