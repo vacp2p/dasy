@@ -1,6 +1,8 @@
 // Package client contains the implementation of a `dasy` client.
 package client
 
+// @todo add ordering by default
+
 import (
 	"crypto/ecdsa"
 	"log"
