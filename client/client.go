@@ -26,7 +26,7 @@ type Chat state.GroupID
 // Peer is the ID for a specific peer.
 type Peer state.PeerID
 
-// Client is the actual daisy client.
+// Client is the actual dasy client.
 type Client struct {
 	sync.Mutex
 
