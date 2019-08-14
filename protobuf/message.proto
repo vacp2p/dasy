@@ -20,3 +20,22 @@ message Message {
     bytes signature = 4;
     int64 sequence = 5;
 }
+
+
+// extend mvds through header
+//header for behaviors
+//
+//{
+//{
+//parents [ids]
+//seqnr
+//prio flag
+//unsync
+//deleted messages~
+//}
+//{
+//invite etc...
+//
+//}
+//
+//}
