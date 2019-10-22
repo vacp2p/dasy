@@ -33,7 +33,7 @@ type Client struct {
 	id Peer // @todo think of turning dataSyncNode ID into a func
 
 	node  internal.DataSyncNode
-	store store.MessageStore
+	//store store.MessageStore
 
 	identity *ecdsa.PrivateKey
 
