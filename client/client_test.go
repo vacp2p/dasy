@@ -37,7 +37,6 @@ func TestClient_Post(t *testing.T) {
 
 	client := Client{
 		node:         node,
-		lastMessages: make(map[Chat]state.MessageID),
 		identity:     identity,
 	}
 
@@ -83,42 +82,6 @@ func TestClient_Listen_MessageSentToFeed(t *testing.T) {
 	if !reflect.DeepEqual(received.Body, msg.Body) {
 		t.Error("expected message did not equal received")
 	}
-}
-
-func TestClient_Listen_RequestsMissingParent(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	node := internal.NewMockDataSyncNode(ctrl)
-	store := internal.NewMockMessageStore(ctrl)
-
-	client := Client{
-		node: node,
-		store: store,
-		feeds: make(map[protobuf.Message_MessageType]*event.Feed),
-	}
-
-	sub := make(chan mvdsproto.Message)
-	node.EXPECT().Subscribe().Return(sub)
-
-	store.EXPECT().Has(gomock.Any()).Return(false, nil)
-	node.EXPECT().RequestMessage(gomock.Any(), gomock.Any()).Return(nil)
-
-	go client.Listen()
-
-	msg := createMessage()
-	msg.PreviousMessage = []byte("parent")
-
-	ok := make(chan event.Payload)
-	client.Feed(msg.MessageType).Subscribe(ok)
-
-	val, _ := proto.Marshal(msg)
-
-	sub<-mvdsproto.Message{
-		Body: val,
-	}
-
-	<-ok
 }
 
 func createMessage() *protobuf.Message {
