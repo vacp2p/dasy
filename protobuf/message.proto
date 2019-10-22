@@ -16,25 +16,6 @@ message Message {
 
     MessageType message_type = 1;
     bytes body = 2;
-    bytes previous_message = 3;
-    bytes signature = 4;
+    bytes signature = 3;
 }
 
-
-// extend mvds through header
-//header for behaviors
-//
-//{
-//{
-//parents [ids]
-//seqnr
-//prio flag
-//unsync
-//deleted messages~
-//}
-//{
-//invite etc...
-//
-//}
-//
-//}

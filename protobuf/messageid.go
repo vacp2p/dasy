@@ -9,7 +9,6 @@ func (m *Message) ID() []byte {
 	b := make([]byte, 4)
 	binary.LittleEndian.PutUint32(b, uint32(m.MessageType))
 	b = append(b, m.Body...)
-	b = append(b, m.PreviousMessage...)
 
 	hash := sha256.Sum256(b)
 	return hash[:]

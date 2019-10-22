@@ -17,7 +17,6 @@ import (
 	"github.com/vacp2p/dasy/protobuf"
 	mvdsproto "github.com/vacp2p/mvds/protobuf"
 	"github.com/vacp2p/mvds/state"
-	"github.com/vacp2p/mvds/store"
 )
 
 // Chat is the ID for a specific chat.
@@ -33,12 +32,11 @@ type Client struct {
 	id Peer // @todo think of turning dataSyncNode ID into a func
 
 	node  internal.DataSyncNode
-	store store.MessageStore
+	//store store.MessageStore
 
 	identity *ecdsa.PrivateKey
 
 	feeds        map[protobuf.Message_MessageType]*event.Feed
-	lastMessages map[Chat]state.MessageID // @todo maybe make type
 }
 
 // Invite invites a peer to a chat.
@@ -100,7 +98,6 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) (s
 	msg := &protobuf.Message{
 		MessageType:     protobuf.Message_MessageType(t),
 		Body:            body,
-		PreviousMessage: c.lastMessage(chat),
 	}
 
 	err := crypto.Sign(c.identity, msg)
@@ -117,8 +114,6 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) (s
 	if err != nil {
 		return state.MessageID{}, errors.Wrap(err, "failed to append message")
 	}
-
-	c.lastMessages[chat] = id
 
 	return id, nil
 }
@@ -148,38 +143,4 @@ func (c *Client) onReceive(message mvdsproto.Message) {
 	}
 
 	go c.Feed(msg.MessageType).Send(payload)
-
-	if len(msg.PreviousMessage) == 0 {
-		return
-	}
-
-	c.handlePreviousMessage(
-		bytesToGroupID(message.GroupId),
-		bytesToMessageID(msg.PreviousMessage),
-	)
-}
-
-func (c *Client) handlePreviousMessage(group state.GroupID, previousMessage state.MessageID) {
-	ok, err := c.store.Has(previousMessage)
-	if ok {
-		return
-	}
-
-	if err != nil {
-		log.Printf("error while checking if message exists: %s", err.Error())
-	}
-
-	err = c.node.RequestMessage(group, previousMessage)
-	if err != nil {
-		log.Printf("error while requesting message: %s", err.Error())
-	}
-}
-
-func (c *Client) lastMessage(chat Chat) []byte {
-	last, ok := c.lastMessages[chat]
-	if !ok {
-		return nil
-	}
-
-	return last[:]
 }
