@@ -118,8 +118,7 @@ func (c *Client) send(chat Chat, t protobuf.Message_MessageType, body []byte) (s
 	return id, nil
 }
 
-// onReceive handles lower level message receiving logic, such as requesting all previous message dependencies that we
-// may not have, as well as unmarshalling and storing the message.
+// onReceive handles lower level message receiving logic
 func (c *Client) onReceive(message mvdsproto.Message) {
 	var msg protobuf.Message
 	err := proto.Unmarshal(message.Body, &msg)
